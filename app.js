@@ -569,55 +569,53 @@ if(monthlyData.length) renderLineChart(monthlyData,'monthlyLineChart','monthly-r
 })();
 
 function exportChart(chartId, fileName) {
-    // 1. Get the chart instance
-    const chart = Chart.getChart(chartId);
-    if (!chart) return;
+    // 1. Find the chart and the canvas
+    const canvas = document.getElementById(chartId);
+    const chart = Chart.getChart(canvas);
 
-    // 2. Save current settings so we can restore them later
-    const originalLabels = chart.data.labels;
-    const originalData = chart.data.datasets[0].data;
+    if (!chart) {
+        alert("Chart not found!");
+        return;
+    }
+
+    // 2. Identify the last data point
+    const lastIndex = chart.data.labels.length - 1;
+    const lastLabel = chart.data.labels[lastIndex];
+    const lastValue = chart.data.datasets[0].data[lastIndex];
+
+    // 3. Draw the label manually on the canvas context
+    const ctx = canvas.getContext('2d');
+    const meta = chart.getDatasetMeta(0);
+    const lastPoint = meta.data[meta.data.length - 1];
+
+    // --- DRAWING THE LABEL ---
+    ctx.save();
+    ctx.fillStyle = '#1e293b'; // Dark background for the label
+    ctx.font = 'bold 14px Arial';
+    ctx.textAlign = 'center';
     
-    // 3. Logic to show the LAST data label only
-    const lastValue = originalData[originalData.length - 1];
-    const lastLabel = originalLabels[originalLabels.length - 1];
+    const text = lastLabel + ": " + lastValue + "%";
+    const textWidth = ctx.measureText(text).width;
+    
+    // Draw background box for the label
+    ctx.fillRect(lastPoint.x - (textWidth/2) - 5, lastPoint.y - 40, textWidth + 10, 25);
+    
+    // Draw text
+    ctx.fillStyle = 'white';
+    ctx.fillText(text, lastPoint.x, lastPoint.y - 23);
+    ctx.restore();
 
-    // 4. Temporarily add a "Plugin" to draw the label just for the export
-    const exportPlugin = {
-        id: 'exportLabel',
-        afterDraw: (chart) => {
-            const ctx = chart.ctx;
-            const meta = chart.getDatasetMeta(0);
-            const lastPoint = meta.data[meta.data.length - 1];
-
-            ctx.save();
-            ctx.fillStyle = '#d9534f'; // Red background for the label
-            ctx.font = 'bold 14px Arial';
-            ctx.textAlign = 'center';
-            
-            const text = `${lastLabel}: ${lastValue}%`;
-            const textWidth = ctx.measureText(text).width;
-            
-            // Draw a small box for the label
-            ctx.fillRect(lastPoint.x - (textWidth/2) - 5, lastPoint.y - 35, textWidth + 10, 25);
-            ctx.fillStyle = 'white';
-            ctx.fillText(text, lastPoint.x, lastPoint.y - 18);
-            ctx.restore();
-        }
-    };
-
-    // Add the plugin and update chart to show EVERYTHING
-    chart.config.plugins.push(exportPlugin);
-    chart.update();
-
-    // 5. Download the image
+    // 4. Download the image
     const imageLink = document.createElement('a');
-    imageLink.download = `${fileName}_Dec_2025.png`;
-    imageLink.href = chart.toBase64Image('image/png', 1); // High quality
+    imageLink.download = fileName + "_Dec_2025.png";
+    imageLink.href = canvas.toDataURL('image/png', 1.0);
     imageLink.click();
 
-    // 6. Cleanup: Remove the label and restore original view
-    chart.config.plugins.pop();
-    chart.update();
+    // 5. IMPORTANT: Refresh the chart to remove the label from your dashboard screen
+    // This keeps the dashboard clean after the download is finished
+    setTimeout(() => {
+        chart.update();
+    }, 500);
 }
 
 
