@@ -64,7 +64,10 @@
       <label>Time range (months): <input id="annual-range" type="range" min="6" max="130" value="36" /></label>
       <span id="annual-range-value"></span>
     </div>
-    <div class="chart-wrap"><canvas id="annualLineChart"></canvas></div>
+    <div class="chart-wrap">
+    <canvas id="annualLineChart"></canvas>
+    <button onclick="exportChart('annualLineChart', 'Annual Inflation')" class="download-btn">📥 Download Annual Chart</button>
+</div>
   </section>
 
   <section class="card">
@@ -73,7 +76,9 @@
       <label>Time range (months): <input id="monthly-range" type="range" min="6" max="130" value="36" /></label>
       <span id="monthly-range-value"></span>
     </div>
-    <div class="chart-wrap"><canvas id="monthlyLineChart"></canvas></div>
+    <div class="chart-wrap">canvas id="monthlyLineChart"></canvas>
+    <button onclick="exportChart('monthlyLineChart', 'Monthly Inflation')" class="download-btn">📥 Download Monthly Chart</button>
+</div>
   </section>
 
 </div>
@@ -85,6 +90,7 @@
   <script src="app.js" defer></script>
 </body>
 </html>
+
 
 
 
