@@ -607,7 +607,7 @@ function exportChart(chartId, fileName) {
 
     // 4. Download the image
     const imageLink = document.createElement('a');
-    imageLink.download = fileName + "_Dec_2025.png";
+    imageLink.download = fileName + "_Dec_2025.pdf";
     imageLink.href = canvas.toDataURL('application/pdf', 1.0);
     imageLink.click();
 
@@ -617,6 +617,7 @@ function exportChart(chartId, fileName) {
         chart.update();
     }, 500);
 }
+
 
 
 
