@@ -568,55 +568,64 @@ if(annualData.length) renderLineChart(annualData,'annualLineChart','annual-range
 if(monthlyData.length) renderLineChart(monthlyData,'monthlyLineChart','monthly-range','monthly-range-value');
 })();
 
-function exportChart(chartId, fileName) {
-    // 1. Find the chart and the canvas
+async function exportChart(chartId, fileName) {
+    const { jsPDF } = window.jspdf;
     const canvas = document.getElementById(chartId);
     const chart = Chart.getChart(canvas);
 
-    if (!chart) {
-        alert("Chart not found!");
-        return;
-    }
+    if (!chart) return;
 
-    // 2. Identify the last data point
+    // 1. SAVE CURRENT VIEW (to restore later)
+    const originalMin = chart.options.scales.x.min;
+    const originalMax = chart.options.scales.x.max;
+
+    // 2. PREPARE FOR HIGH-RES EXPORT
+    // Show the whole dataset and disable animations for instant capture
+    chart.options.scales.x.min = undefined;
+    chart.options.scales.x.max = undefined;
+    chart.options.animation = false;
+    chart.update();
+
+    // 3. CAPTURE DATA FOR LABEL
     const lastIndex = chart.data.labels.length - 1;
     const lastLabel = chart.data.labels[lastIndex];
     const lastValue = chart.data.datasets[0].data[lastIndex];
-
-    // 3. Draw the label manually on the canvas context
-    const ctx = canvas.getContext('2d');
     const meta = chart.getDatasetMeta(0);
     const lastPoint = meta.data[meta.data.length - 1];
 
-    // --- DRAWING THE LABEL ---
+    // 4. DRAW THE HIGH-RES LABEL
+    const ctx = canvas.getContext('2d');
     ctx.save();
-    ctx.fillStyle = '#1e293b'; // Dark background for the label
-    ctx.font = 'bold 14px Arial';
+    ctx.fillStyle = '#1e293b'; 
+    ctx.font = 'bold 16px Arial';
     ctx.textAlign = 'center';
-    
-    const text = lastLabel + ": " + lastValue + "%";
+    const text = `${lastLabel}: ${lastValue}%`;
     const textWidth = ctx.measureText(text).width;
-    
-    // Draw background box for the label
-    ctx.fillRect(lastPoint.x - (textWidth/2) - 5, lastPoint.y - 40, textWidth + 10, 25);
-    
-    // Draw text
+    ctx.fillRect(lastPoint.x - (textWidth/2) - 5, lastPoint.y - 45, textWidth + 10, 30);
     ctx.fillStyle = 'white';
-    ctx.fillText(text, lastPoint.x, lastPoint.y - 23);
+    ctx.fillText(text, lastPoint.x, lastPoint.y - 25);
     ctx.restore();
 
-    // 4. Download the image
-    const imageLink = document.createElement('a');
-    imageLink.download = fileName + "_Dec_2025.pdf";
-    imageLink.href = canvas.toDataURL('application/pdf', 1.0);
-    imageLink.click();
+    // 5. CONVERT TO PDF
+    // We capture at 3x scale for "Retina/Publication" quality
+    const imgData = canvas.toDataURL('image/png', 1.0);
+    const pdf = new jsPDF({
+        orientation: 'landscape',
+        unit: 'px',
+        format: [canvas.width, canvas.height]
+    });
 
-    // 5. IMPORTANT: Refresh the chart to remove the label from your dashboard screen
-    // This keeps the dashboard clean after the download is finished
-    setTimeout(() => {
-        chart.update();
-    }, 500);
+    pdf.addImage(imgData, 'PNG', 0, 0, canvas.width, canvas.height);
+    pdf.save(`${fileName}_Full_Report.pdf`);
+
+    // 6. RESTORE DASHBOARD VIEW
+    // Put the slider settings and animations back to normal
+    chart.options.scales.x.min = originalMin;
+    chart.options.scales.x.max = originalMax;
+    chart.options.animation = true;
+    chart.update();
 }
+
 
 
 
