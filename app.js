@@ -568,6 +568,57 @@ if(annualData.length) renderLineChart(annualData,'annualLineChart','annual-range
 if(monthlyData.length) renderLineChart(monthlyData,'monthlyLineChart','monthly-range','monthly-range-value');
 })();
 
+function exportChart(chartId, fileName) {
+    // 1. Get the chart instance
+    const chart = Chart.getChart(chartId);
+    if (!chart) return;
+
+    // 2. Save current settings so we can restore them later
+    const originalLabels = chart.data.labels;
+    const originalData = chart.data.datasets[0].data;
+    
+    // 3. Logic to show the LAST data label only
+    const lastValue = originalData[originalData.length - 1];
+    const lastLabel = originalLabels[originalLabels.length - 1];
+
+    // 4. Temporarily add a "Plugin" to draw the label just for the export
+    const exportPlugin = {
+        id: 'exportLabel',
+        afterDraw: (chart) => {
+            const ctx = chart.ctx;
+            const meta = chart.getDatasetMeta(0);
+            const lastPoint = meta.data[meta.data.length - 1];
+
+            ctx.save();
+            ctx.fillStyle = '#d9534f'; // Red background for the label
+            ctx.font = 'bold 14px Arial';
+            ctx.textAlign = 'center';
+            
+            const text = `${lastLabel}: ${lastValue}%`;
+            const textWidth = ctx.measureText(text).width;
+            
+            // Draw a small box for the label
+            ctx.fillRect(lastPoint.x - (textWidth/2) - 5, lastPoint.y - 35, textWidth + 10, 25);
+            ctx.fillStyle = 'white';
+            ctx.fillText(text, lastPoint.x, lastPoint.y - 18);
+            ctx.restore();
+        }
+    };
+
+    // Add the plugin and update chart to show EVERYTHING
+    chart.config.plugins.push(exportPlugin);
+    chart.update();
+
+    // 5. Download the image
+    const imageLink = document.createElement('a');
+    imageLink.download = `${fileName}_Dec_2025.png`;
+    imageLink.href = chart.toBase64Image('image/png', 1); // High quality
+    imageLink.click();
+
+    // 6. Cleanup: Remove the label and restore original view
+    chart.config.plugins.pop();
+    chart.update();
+}
 
 
 
