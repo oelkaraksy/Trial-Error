@@ -608,7 +608,7 @@ function exportChart(chartId, fileName) {
     // 4. Download the image
     const imageLink = document.createElement('a');
     imageLink.download = fileName + "_Dec_2025.png";
-    imageLink.href = canvas.toDataURL('image/png', 1.0);
+    imageLink.href = canvas.toDataURL('application/pdf', 1.0);
     imageLink.click();
 
     // 5. IMPORTANT: Refresh the chart to remove the label from your dashboard screen
@@ -617,6 +617,7 @@ function exportChart(chartId, fileName) {
         chart.update();
     }, 500);
 }
+
 
 
 
