@@ -568,64 +568,143 @@ if(annualData.length) renderLineChart(annualData,'annualLineChart','annual-range
 if(monthlyData.length) renderLineChart(monthlyData,'monthlyLineChart','monthly-range','monthly-range-value');
 })();
 
+// async function exportChart(chartId, fileName) {
+//     const { jsPDF } = window.jspdf;
+//     const canvas = document.getElementById(chartId);
+//     const chart = Chart.getChart(canvas);
+
+//     if (!chart) return;
+
+//     // 1. SAVE CURRENT VIEW (to restore later)
+//     const originalMin = chart.options.scales.x.min;
+//     const originalMax = chart.options.scales.x.max;
+
+//     // 2. PREPARE FOR HIGH-RES EXPORT
+//     // Show the whole dataset and disable animations for instant capture
+//     chart.options.scales.x.min = undefined;
+//     chart.options.scales.x.max = undefined;
+//     chart.options.animation = false;
+//     chart.update();
+
+//     // 3. CAPTURE DATA FOR LABEL
+//     const lastIndex = chart.data.labels.length - 1;
+//     const lastLabel = chart.data.labels[lastIndex];
+//     const lastValue = chart.data.datasets[0].data[lastIndex];
+//     const meta = chart.getDatasetMeta(0);
+//     const lastPoint = meta.data[meta.data.length - 1];
+
+//     // 4. DRAW THE HIGH-RES LABEL
+//     const ctx = canvas.getContext('2d');
+//     ctx.save();
+//     ctx.fillStyle = '#1e293b'; 
+//     ctx.font = 'bold 16px Arial';
+//     ctx.textAlign = 'center';
+//     const text = `${lastLabel}: ${lastValue}%`;
+//     const textWidth = ctx.measureText(text).width;
+//     ctx.fillRect(lastPoint.x - (textWidth/2) - 5, lastPoint.y - 45, textWidth + 10, 30);
+//     ctx.fillStyle = 'white';
+//     ctx.fillText(text, lastPoint.x, lastPoint.y - 25);
+//     ctx.restore();
+
+//     // 5. CONVERT TO PDF
+//     // We capture at 3x scale for "Retina/Publication" quality
+//     const imgData = canvas.toDataURL('image/png', 1.0);
+//     const pdf = new jsPDF({
+//         orientation: 'landscape',
+//         unit: 'px',
+//         format: [canvas.width, canvas.height]
+//     });
+
+//     pdf.addImage(imgData, 'PNG', 0, 0, canvas.width, canvas.height);
+//     pdf.save(`${fileName}_Full_Report.pdf`);
+
+//     // 6. RESTORE DASHBOARD VIEW
+//     // Put the slider settings and animations back to normal
+//     chart.options.scales.x.min = originalMin;
+//     chart.options.scales.x.max = originalMax;
+//     chart.options.animation = true;
+//     chart.update();
+// }
+
 async function exportChart(chartId, fileName) {
     const { jsPDF } = window.jspdf;
     const canvas = document.getElementById(chartId);
     const chart = Chart.getChart(canvas);
-
     if (!chart) return;
 
-    // 1. SAVE CURRENT VIEW (to restore later)
+    // 1. SAVE STATE & SHOW ALL DATA
     const originalMin = chart.options.scales.x.min;
     const originalMax = chart.options.scales.x.max;
-
-    // 2. PREPARE FOR HIGH-RES EXPORT
-    // Show the whole dataset and disable animations for instant capture
     chart.options.scales.x.min = undefined;
     chart.options.scales.x.max = undefined;
     chart.options.animation = false;
     chart.update();
 
-    // 3. CAPTURE DATA FOR LABEL
+    // 2. PREPARE CANVAS (White Background & High Res)
+    const ctx = canvas.getContext('2d');
+    
+    // Create a temporary "buffer" to draw the white background behind the chart
+    ctx.save();
+    ctx.globalCompositeOperation = 'destination-over';
+    ctx.fillStyle = 'white';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.restore();
+
+    // 3. CALCULATE LABEL POSITION
     const lastIndex = chart.data.labels.length - 1;
     const lastLabel = chart.data.labels[lastIndex];
     const lastValue = chart.data.datasets[0].data[lastIndex];
     const meta = chart.getDatasetMeta(0);
     const lastPoint = meta.data[meta.data.length - 1];
 
-    // 4. DRAW THE HIGH-RES LABEL
-    const ctx = canvas.getContext('2d');
-    ctx.save();
-    ctx.fillStyle = '#1e293b'; 
-    ctx.font = 'bold 16px Arial';
-    ctx.textAlign = 'center';
+    // Label styling
     const text = `${lastLabel}: ${lastValue}%`;
+    ctx.font = 'bold 16px Arial';
     const textWidth = ctx.measureText(text).width;
-    ctx.fillRect(lastPoint.x - (textWidth/2) - 5, lastPoint.y - 45, textWidth + 10, 30);
+    const boxWidth = textWidth + 14;
+    const boxHeight = 28;
+    
+    // Position label to the LEFT of the point to avoid the edge
+    const boxX = lastPoint.x - boxWidth - 20; 
+    const boxY = lastPoint.y - 40;
+
+    // 4. DRAW LEADER LINE & BOX
+    ctx.save();
+    // Draw the line
+    ctx.beginPath();
+    ctx.moveTo(lastPoint.x, lastPoint.y);
+    ctx.lineTo(boxX + boxWidth, boxY + (boxHeight / 2));
+    ctx.strokeStyle = '#1e293b';
+    ctx.lineWidth = 2;
+    ctx.stroke();
+
+    // Draw the Box
+    ctx.fillStyle = '#1e293b'; // Professional Dark Blue/Grey
+    ctx.roundRect(boxX, boxY, boxWidth, boxHeight, 5); // Rounded corners
+    ctx.fill();
+
+    // Draw the Text
     ctx.fillStyle = 'white';
-    ctx.fillText(text, lastPoint.x, lastPoint.y - 25);
+    ctx.textAlign = 'left';
+    ctx.fillText(text, boxX + 7, boxY + 19);
     ctx.restore();
 
-    // 5. CONVERT TO PDF
-    // We capture at 3x scale for "Retina/Publication" quality
+    // 5. EXPORT TO PDF
     const imgData = canvas.toDataURL('image/png', 1.0);
     const pdf = new jsPDF({
         orientation: 'landscape',
         unit: 'px',
         format: [canvas.width, canvas.height]
     });
-
     pdf.addImage(imgData, 'PNG', 0, 0, canvas.width, canvas.height);
-    pdf.save(`${fileName}_Full_Report.pdf`);
+    pdf.save(`${fileName}_Export.pdf`);
 
-    // 6. RESTORE DASHBOARD VIEW
-    // Put the slider settings and animations back to normal
+    // 6. RESTORE VIEW
     chart.options.scales.x.min = originalMin;
     chart.options.scales.x.max = originalMax;
     chart.options.animation = true;
     chart.update();
 }
-
 
 
 
